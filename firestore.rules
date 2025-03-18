@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if the user is accessing their own document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to check if a write operation is only modifying allowed fields
+    function onlyUpdatingAllowedFields(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Allow read access to user profiles for authenticated users
+      // This is needed for the search functionality
+      allow read: if isAuthenticated();
+      
+      // Only the owner can create their own document
+      allow create: if isOwner(userId);
+      
+      // For updates, apply different rules based on who's making the request
+      allow update: if isOwner(userId) || 
+                      // Allow updates if only modifying the followers array and the request
+                      // is coming from an authenticated user
+                      (isAuthenticated() && 
+                       onlyUpdatingAllowedFields(['followers', 'updatedAt']));
+      
+      // Only the owner can delete their profile
+      allow delete: if isOwner(userId);
+    }
+    
+    // Add rules for other collections as needed
+    match /{document=**} {
+      allow read, write: if false; // Default deny for all other collections
+    }
+  }
+} 
