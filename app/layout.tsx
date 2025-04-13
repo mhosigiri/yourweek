@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "YourWeek",
+  title: "Social-Plan",
   description: "Organize your week efficiently",
 };
 

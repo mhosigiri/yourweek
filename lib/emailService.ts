@@ -58,19 +58,17 @@ export const sendVerificationEmail = async (email: string, verificationCode: str
     // Create the email content
     const emailData: EmailData = {
       to: email,
-      from: process.env.NEXT_PUBLIC_EMAIL_FROM || 'noreply@yourweek.app',
-      subject: 'Your YourWeek Verification Code',
+      from: process.env.NEXT_PUBLIC_EMAIL_FROM || 'noreply@social-plan.app',
+      subject: 'Your Social-Plan Verification Code',
       text: `Your verification code is: ${verificationCode}. This code will expire in 10 minutes.`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4F46E5;">YourWeek Verification</h2>
-          <p>Thank you for signing up for YourWeek! To complete your registration, please use the following code:</p>
-          <div style="background-color: #F3F4F6; padding: 20px; text-align: center; font-size: 24px; letter-spacing: 4px; margin: 20px 0;">
-            <strong>${verificationCode}</strong>
-          </div>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <h2 style="color: #4F46E5;">Social-Plan Verification</h2>
+          <p>Thank you for signing up for Social-Plan! To complete your registration, please use the following code:</p>
+          <div style="margin: 30px 0; padding: 10px; background-color: #F3F4F6; border-radius: 4px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px;">${verificationCode}</div>
           <p>This code will expire in 10 minutes.</p>
           <p>If you didn't request this code, you can safely ignore this email.</p>
-          <p style="margin-top: 40px; font-size: 12px; color: #6B7280;">© ${new Date().getFullYear()} YourWeek. All rights reserved.</p>
+          <p style="margin-top: 40px; font-size: 12px; color: #6B7280;">© ${new Date().getFullYear()} Social-Plan. All rights reserved.</p>
         </div>
       `
     };

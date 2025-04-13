@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains the implementation of the user search and follow system in the YourWeek application. The system allows users to:
+This document explains the implementation of the user search and follow system in the Social-Plan application. The system allows users to:
 
 1. Search for other users by their display name or email
 2. Follow and unfollow other users

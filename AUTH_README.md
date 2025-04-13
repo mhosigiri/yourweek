@@ -1,10 +1,10 @@
-# YourWeek Authentication System
+# Social-Plan Authentication System
 
-This document explains the YourWeek application's authentication system and how to set it up.
+This document explains the Social-Plan application's authentication system and how to set it up.
 
 ## Overview
 
-YourWeek uses Firebase Authentication for user management, with custom email verification through SendGrid. The system provides:
+Social-Plan uses Firebase Authentication for user management, with custom email verification through SendGrid. The system provides:
 
 - Email/password user registration and login
 - Optional email verification with a 6-digit code

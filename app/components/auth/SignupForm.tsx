@@ -503,7 +503,7 @@ const SignupForm: React.FC = () => {
         // Create a complete user profile using our service
         await createUserProfile(userCredential.user.uid, {
           displayName: phoneNumber,
-          email: `${phoneNumber.replace(/[+\s]/g, "")}@phone.yourweek.app`,
+          email: `${phoneNumber.replace(/[+\s]/g, "")}@phone.social-plan.app`,
           emailVerified: true,
         });
 
@@ -580,7 +580,7 @@ const SignupForm: React.FC = () => {
     <div className="bg-white px-6 py-12 shadow-md rounded-lg max-w-md w-full mx-auto">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
         <h2 className="text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-          Create your YourWeek account
+          Create your Social-Plan account
         </h2>
       </div>
 

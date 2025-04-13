@@ -1082,14 +1082,14 @@ const DashboardScene: React.FC<DashboardSceneProps> = ({
 
 // Dashboard content component
 const DashboardContent = () => {
-  const { user } = useAuth();
+  const { logOut } = useAuth();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [savedTasks, setSavedTasks] = useState<Task[]>([]);
 
   // Load tasks from localStorage on initial render
   useEffect(() => {
-    const storedTasks = localStorage.getItem("social-plan_tasks");
+    const storedTasks = localStorage.getItem("yourweek_tasks");
     if (storedTasks) {
       try {
         const parsedTasks = JSON.parse(storedTasks);
@@ -1117,7 +1117,7 @@ const DashboardContent = () => {
 
   const handleSaveWeek = () => {
     // Save to localStorage
-    localStorage.setItem("social-plan_tasks", JSON.stringify(tasks));
+    localStorage.setItem("yourweek_tasks", JSON.stringify(tasks));
     setSavedTasks([...tasks]);
   };
 
@@ -1138,7 +1138,7 @@ const DashboardContent = () => {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">
-            {user?.displayName} Dashboard
+            YourWeek Dashboard
           </h1>
           <div className="flex space-x-4 items-center">
             <Link

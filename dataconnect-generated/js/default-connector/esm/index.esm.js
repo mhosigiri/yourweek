@@ -1,7 +1,6 @@
-
 export const connectorConfig = {
   connector: 'default',
-  service: 'yourweek',
+  service: 'social-plan',
   location: 'us-central1'
 };
 

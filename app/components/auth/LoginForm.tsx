@@ -13,6 +13,8 @@ import {
 import { sendVerificationEmail } from "@/lib/emailService";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
+import EnhancedInput from "../ui/EnhancedInput";
+import { EmailIcon, PasswordIcon, VerifyIcon } from "../ui/IconSet";
 import {
   doc,
   getDoc,
@@ -121,8 +123,9 @@ const LoginForm: React.FC = () => {
 
       switch (err.code) {
         case "auth/user-not-found":
-          errorMessage =
-            "No account found with this email. Please sign up first.";
+        case "auth/invalid-credential":
+        case "auth/invalid-login-credentials":
+          errorMessage = "Incorrect email or password. Please try again.";
           break;
         case "auth/wrong-password":
           errorMessage = "Incorrect password. Please try again.";
@@ -138,7 +141,8 @@ const LoginForm: React.FC = () => {
             "Network error. Please check your internet connection.";
           break;
         default:
-          errorMessage = err.message || errorMessage;
+          // Remove Firebase-specific error details from user-facing messages
+          errorMessage = "Authentication error. Please try again.";
       }
 
       setError(errorMessage);
@@ -204,7 +208,20 @@ const LoginForm: React.FC = () => {
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Email verification error:", err);
-      setError(err.message || "Failed to verify code. Please try again.");
+
+      // Provide user-friendly error messages
+      let errorMessage = "Failed to verify code. Please try again.";
+
+      if (err.message.includes("expired")) {
+        errorMessage =
+          "Verification code has expired. Please request a new code.";
+      } else if (err.message.includes("Invalid verification code")) {
+        errorMessage = "Invalid verification code. Please check and try again.";
+      } else if (err.message.includes("User session expired")) {
+        errorMessage = "Your session has expired. Please log in again.";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -236,7 +253,18 @@ const LoginForm: React.FC = () => {
       setError("");
     } catch (err: any) {
       console.error("Error resending code:", err);
-      setError("Failed to resend verification code. Please try again.");
+
+      // Provide user-friendly error messages
+      let errorMessage =
+        "Failed to resend verification code. Please try again.";
+
+      if (err.code === "auth/too-many-requests") {
+        errorMessage = "Too many requests. Please try again later.";
+      } else if (err.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -267,17 +295,42 @@ const LoginForm: React.FC = () => {
       setError("");
     } catch (err: any) {
       console.error("Reset password error:", err);
-      setError(err.message || "Failed to send reset email. Please try again.");
+
+      // Provide user-friendly error messages
+      let errorMessage = "Failed to send reset email. Please try again.";
+
+      if (err.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email address.";
+      } else if (err.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address format.";
+      } else if (err.code === "auth/too-many-requests") {
+        errorMessage = "Too many requests. Please try again later.";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white px-6 py-12 shadow-md rounded-lg max-w-md w-full mx-auto">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+    <div className="bg-white px-6 py-12 shadow-md rounded-lg max-w-md w-full mx-auto relative overflow-hidden">
+      {/* Abstract shapes */}
+      <div className="absolute top-0 right-0 bg-blue-100 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-50"></div>
+      <div className="absolute bottom-0 left-0 bg-purple-100 w-24 h-24 rounded-full -ml-12 -mb-12 opacity-50"></div>
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-sm relative">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 w-16 h-16 rounded-lg flex items-center justify-center shadow-md">
+            <span className="text-white text-2xl font-bold">SP</span>
+          </div>
+        </div>
+
         <h2 className="text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-          {verificationRequired ? "Verify Your Email" : "Sign in to YourWeek"}
+          {verificationRequired
+            ? "Verify Your Email"
+            : "Sign in to Social-Plan"}
         </h2>
       </div>
 
@@ -322,7 +375,7 @@ const LoginForm: React.FC = () => {
               below to verify your account.
             </p>
 
-            <Input
+            <EnhancedInput
               id="verificationCode"
               label="Verification Code"
               type="text"
@@ -334,6 +387,7 @@ const LoginForm: React.FC = () => {
                 )
               }
               placeholder="Enter 6-digit code"
+              icon={<VerifyIcon />}
             />
 
             {error && <div className="text-red-500 text-sm">{error}</div>}
@@ -363,22 +417,24 @@ const LoginForm: React.FC = () => {
           </form>
         ) : (
           <form className="space-y-6" onSubmit={handleLogin}>
-            <Input
+            <EnhancedInput
               id="email"
               label="Email address"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              icon={<EmailIcon />}
             />
 
-            <Input
+            <EnhancedInput
               id="password"
               label="Password"
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              icon={<PasswordIcon />}
             />
 
             {error && <div className="text-red-500 text-sm">{error}</div>}

@@ -1,4 +1,4 @@
-# YourWeek App
+# Social-Plan App
 
 A Next.js application that helps users manage their weekly schedule, profiles, and connections.
 

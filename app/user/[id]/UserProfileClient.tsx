@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import { useAuth } from "../../context/AuthContext";
 import Button from "../../components/ui/Button";
@@ -41,9 +41,11 @@ const getDayColor = (day: string) => {
   return colors[dayIndex] || "#3b82f6";
 };
 
-export default function UserProfilePage() {
-  const params = useParams();
-  const userId = params && params.id ? (params.id as string) : "";
+interface UserProfileClientProps {
+  userId: string;
+}
+
+export default function UserProfileClient({ userId }: UserProfileClientProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<
