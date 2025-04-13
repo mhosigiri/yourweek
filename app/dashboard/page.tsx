@@ -792,130 +792,260 @@ const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({ tasks }) => {
       </div>
 
       {hasAnyTasks ? (
-        <div className="overflow-hidden rounded-lg border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {DAYS_OF_WEEK.map((day) => {
-                  const isCurrentDay =
-                    day ===
-                    [
-                      "Sunday",
-                      "Monday",
-                      "Tuesday",
-                      "Wednesday",
-                      "Thursday",
-                      "Friday",
-                      "Saturday",
-                    ][new Date().getDay()];
-                  const dayColor = getDayColor(day);
+        <>
+          {/* Desktop view (table) - hidden on mobile */}
+          <div className="hidden md:block overflow-hidden rounded-lg border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  {DAYS_OF_WEEK.map((day) => {
+                    const isCurrentDay =
+                      day ===
+                      [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                      ][new Date().getDay()];
+                    const dayColor = getDayColor(day);
 
-                  return (
-                    <th
-                      key={day}
-                      scope="col"
-                      className={`px-3 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                        isCurrentDay
-                          ? "bg-blue-50 border-b-2"
-                          : "text-gray-500 border-b"
-                      }`}
-                      style={{
-                        borderBottomColor: isCurrentDay ? dayColor : undefined,
-                        color: isCurrentDay ? dayColor : undefined,
-                      }}
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold">{day}</span>
-                        <span className="text-xs font-normal opacity-75">
-                          {getFormattedDate(day)}
-                        </span>
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              <tr className="divide-x divide-gray-100">
-                {DAYS_OF_WEEK.map((day) => {
-                  const dayTasks = tasksByDay[day] || [];
-                  const isEmpty = dayTasks.length === 0;
-                  const dayColor = getDayColor(day);
-
-                  return (
-                    <td
-                      key={day}
-                      className="px-2 py-2 align-top"
-                      style={{ minHeight: "120px" }}
-                    >
-                      {isEmpty ? (
-                        <div className="h-20 flex items-center justify-center text-gray-400 text-xs">
-                          No tasks
+                    return (
+                      <th
+                        key={day}
+                        scope="col"
+                        className={`px-3 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                          isCurrentDay
+                            ? "bg-blue-50 border-b-2"
+                            : "text-gray-500 border-b"
+                        }`}
+                        style={{
+                          borderBottomColor: isCurrentDay
+                            ? dayColor
+                            : undefined,
+                          color: isCurrentDay ? dayColor : undefined,
+                        }}
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold">{day}</span>
+                          <span className="text-xs font-normal opacity-75">
+                            {getFormattedDate(day)}
+                          </span>
                         </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {dayTasks.map((task) => {
-                            const isActive = isTaskActive(task);
-                            const lightColor = `${dayColor}20`;
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <tr className="divide-x divide-gray-100">
+                  {DAYS_OF_WEEK.map((day) => {
+                    const dayTasks = tasksByDay[day] || [];
+                    const isEmpty = dayTasks.length === 0;
+                    const dayColor = getDayColor(day);
 
-                            return (
-                              <div
-                                key={task.id}
-                                className={`p-2 rounded text-xs ${
-                                  isActive
-                                    ? "border-l-2 bg-opacity-10"
-                                    : "hover:bg-gray-50"
-                                }`}
+                    return (
+                      <td
+                        key={day}
+                        className="px-2 py-2 align-top"
+                        style={{ minHeight: "120px" }}
+                      >
+                        {isEmpty ? (
+                          <div className="h-20 flex items-center justify-center text-gray-400 text-xs">
+                            No tasks
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {dayTasks.map((task) => {
+                              const isActive = isTaskActive(task);
+                              const lightColor = `${dayColor}20`;
+
+                              return (
+                                <div
+                                  key={task.id}
+                                  className={`p-2 rounded text-xs ${
+                                    isActive
+                                      ? "border-l-2 bg-opacity-10"
+                                      : "hover:bg-gray-50"
+                                  }`}
+                                  style={{
+                                    backgroundColor: isActive
+                                      ? lightColor
+                                      : undefined,
+                                    borderLeftColor: isActive
+                                      ? dayColor
+                                      : undefined,
+                                  }}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <span
+                                      className={`font-medium ${
+                                        isActive
+                                          ? "text-gray-900"
+                                          : "text-gray-700"
+                                      }`}
+                                      style={{
+                                        color: isActive ? dayColor : undefined,
+                                      }}
+                                    >
+                                      {task.startTime} - {task.endTime}
+                                    </span>
+                                    {isActive && (
+                                      <span
+                                        className="text-xs font-medium px-1.5 py-0.5 rounded-full text-white"
+                                        style={{ backgroundColor: dayColor }}
+                                      >
+                                        Now
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div
+                                    className={`mt-1 text-xs ${
+                                      isActive ? "font-medium" : "font-normal"
+                                    } text-gray-600`}
+                                  >
+                                    {task.description}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile view (timeline) */}
+          <div className="md:hidden space-y-4">
+            {DAYS_OF_WEEK.map((day) => {
+              const dayTasks = tasksByDay[day] || [];
+              const isEmpty = dayTasks.length === 0;
+              const dayColor = getDayColor(day);
+              const isCurrentDay =
+                day ===
+                [
+                  "Sunday",
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                ][new Date().getDay()];
+
+              // Skip empty days for cleaner mobile view
+              if (isEmpty) return null;
+
+              return (
+                <div
+                  key={day}
+                  className="rounded-lg border border-gray-200 overflow-hidden"
+                >
+                  <div
+                    className="py-2 px-3 font-medium flex justify-between items-center"
+                    style={{
+                      backgroundColor: isCurrentDay
+                        ? `${dayColor}10`
+                        : "#f9fafb",
+                      borderBottom: `1px solid ${
+                        isCurrentDay ? dayColor : "#e5e7eb"
+                      }`,
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span
+                        className="text-sm font-semibold"
+                        style={{ color: isCurrentDay ? dayColor : "#374151" }}
+                      >
+                        {day}
+                      </span>
+                      <span className="text-xs opacity-75">
+                        {getFormattedDate(day)}
+                      </span>
+                    </div>
+                    {isCurrentDay && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                        Today
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="py-1 divide-y divide-gray-100">
+                    {dayTasks.map((task, index) => {
+                      const isActive = isTaskActive(task);
+                      const lightColor = `${dayColor}20`;
+                      const isLast = index === dayTasks.length - 1;
+
+                      return (
+                        <div
+                          key={task.id}
+                          className={`relative pl-8 pr-3 py-2.5 ${
+                            isLast ? "" : "pb-3.5"
+                          }`}
+                        >
+                          {/* Timeline dot */}
+                          <div
+                            className="absolute left-3.5 top-3 w-3 h-3 rounded-full z-10"
+                            style={{
+                              backgroundColor: isActive ? dayColor : "#d1d5db",
+                            }}
+                          />
+
+                          {/* Timeline line */}
+                          {!isLast && (
+                            <div
+                              className="absolute left-4.5 top-6 w-0.5 h-full"
+                              style={{ backgroundColor: "#e5e7eb" }}
+                            />
+                          )}
+
+                          <div
+                            className={`rounded-md p-2 ${
+                              isActive ? "bg-opacity-10" : ""
+                            }`}
+                            style={{
+                              backgroundColor: isActive
+                                ? lightColor
+                                : undefined,
+                            }}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span
+                                className="text-sm font-medium"
                                 style={{
-                                  backgroundColor: isActive
-                                    ? lightColor
-                                    : undefined,
-                                  borderLeftColor: isActive
-                                    ? dayColor
-                                    : undefined,
+                                  color: isActive ? dayColor : "#4b5563",
                                 }}
                               >
-                                <div className="flex justify-between items-center">
-                                  <span
-                                    className={`font-medium ${
-                                      isActive
-                                        ? "text-gray-900"
-                                        : "text-gray-700"
-                                    }`}
-                                    style={{
-                                      color: isActive ? dayColor : undefined,
-                                    }}
-                                  >
-                                    {task.startTime} - {task.endTime}
-                                  </span>
-                                  {isActive && (
-                                    <span
-                                      className="text-xs font-medium px-1.5 py-0.5 rounded-full text-white"
-                                      style={{ backgroundColor: dayColor }}
-                                    >
-                                      Now
-                                    </span>
-                                  )}
-                                </div>
-                                <div
-                                  className={`mt-1 text-xs ${
-                                    isActive ? "font-medium" : "font-normal"
-                                  } text-gray-600`}
+                                {task.startTime} - {task.endTime}
+                              </span>
+                              {isActive && (
+                                <span
+                                  className="text-xs font-medium px-1.5 py-0.5 rounded-full text-white"
+                                  style={{ backgroundColor: dayColor }}
                                 >
-                                  {task.description}
-                                </div>
-                              </div>
-                            );
-                          })}
+                                  Now
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 text-sm text-gray-600">
+                              {task.description}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed border-gray-200 rounded-lg">
           <svg
@@ -1086,6 +1216,7 @@ const DashboardContent = () => {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [savedTasks, setSavedTasks] = useState<Task[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Load tasks from localStorage on initial render
   useEffect(() => {
@@ -1133,33 +1264,166 @@ const DashboardContent = () => {
     }
   };
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {user?.displayName} Dashboard
-          </h1>
-          <div className="flex space-x-4 items-center">
-            <Link
-              href="/profile"
-              className="text-sm font-semibold text-gray-600 hover:text-gray-900"
-            >
-              Profile
-            </Link>
-            <Link
-              href="/search"
-              className="text-sm font-semibold text-gray-600 hover:text-gray-900"
-            >
-              Search Users
-            </Link>
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+          {/* Desktop header */}
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-8 w-8 text-blue-600 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h2a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3"
+                />
+              </svg>
+              <span className="hidden sm:inline">{user?.displayName}</span>
+            </h1>
+
+            {/* Desktop Navigation - Hidden on mobile */}
+            <div className="hidden md:flex space-x-4 items-center">
+              <Link
+                href="/profile"
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900"
+              >
+                Profile
+              </Link>
+              <Link
+                href="/search"
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900"
+              >
+                Search Users
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+              >
+                Logout
+              </button>
+            </div>
+
+            {/* Mobile menu button - Only visible on mobile */}
             <button
-              onClick={handleLogout}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+              className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 focus:outline-none"
+              onClick={toggleMobileMenu}
             >
-              Logout
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                {mobileMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
             </button>
           </div>
+
+          {/* Mobile Navigation Menu - Only visible when open */}
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-3 py-3 border-t border-gray-200 space-y-1">
+              <div className="flex items-center px-2 py-2 text-sm font-medium text-gray-900">
+                <div className="flex items-center">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-2">
+                    {user?.displayName?.charAt(0) || "U"}
+                  </div>
+                  <span>{user?.displayName}</span>
+                </div>
+              </div>
+              <Link
+                href="/profile"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              >
+                <div className="flex items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 mr-2 text-gray-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Profile
+                </div>
+              </Link>
+              <Link
+                href="/search"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              >
+                <div className="flex items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 mr-2 text-gray-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  Search Users
+                </div>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-red-600 hover:text-red-800 hover:bg-red-50"
+              >
+                <div className="flex items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 mr-2 text-red-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </header>
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -1167,10 +1431,11 @@ const DashboardContent = () => {
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-2xl font-semibold text-gray-900">
-                Weekly Planner
+                Social-Plan
               </h2>
               <p className="mt-1 text-gray-500">
-                Plan your week with our interactive 3D scheduler
+                Plan your week with our interactive 3D scheduler together with
+                friends
               </p>
             </div>
 
