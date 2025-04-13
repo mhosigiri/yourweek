@@ -251,19 +251,34 @@ export async function searchUsers(
       const emailMatches = userData.email.toLowerCase().includes(searchTermLower);
       
       if (displayNameMatches || emailMatches) {
+        // Calculate follower and following counts
+        const followerCount = userData.followers?.length || 0;
+        const followingCount = userData.following?.length || 0;
+        
         results.push({
           uid: userData.uid,
           displayName: userData.displayName,
           email: userData.email,
           bio: userData.bio,
           photoURL: userData.photoURL,
-          isFollowing: following.includes(userData.uid)
+          isFollowing: following.includes(userData.uid),
+          followerCount,
+          followingCount,
+          availability: userData.availability || []
         });
       }
     });
     
     // Sort results by relevance (exact matches first, then partial matches)
     results.sort((a, b) => {
+      // First prioritize displayName matches
+      const aDisplayNameMatches = a.displayName.toLowerCase().includes(searchTermLower);
+      const bDisplayNameMatches = b.displayName.toLowerCase().includes(searchTermLower);
+      
+      if (aDisplayNameMatches && !bDisplayNameMatches) return -1;
+      if (!aDisplayNameMatches && bDisplayNameMatches) return 1;
+      
+      // Then prioritize exact matches over partial matches
       const aExactMatch = 
         a.displayName.toLowerCase() === searchTermLower || 
         a.email.toLowerCase() === searchTermLower;
@@ -273,7 +288,9 @@ export async function searchUsers(
       
       if (aExactMatch && !bExactMatch) return -1;
       if (!aExactMatch && bExactMatch) return 1;
-      return 0;
+      
+      // Then sort by follower count (most popular first)
+      return (b.followerCount || 0) - (a.followerCount || 0);
     });
     
     // Limit to maxResults
@@ -371,5 +388,38 @@ export async function isFollowingUser(
     }
     console.error('Error checking follow status:', error);
     return false;
+  }
+}
+
+/**
+ * Get a user's full profile with computed properties
+ */
+export async function getUserProfileWithStats(
+  userId: string,
+  currentUserId?: string
+): Promise<UserProfile & { isFollowing: boolean; followerCount: number; followingCount: number }> {
+  try {
+    const profile = await getUserProfile(userId);
+    if (!profile) {
+      throw new Error("User profile not found");
+    }
+    
+    let isFollowing = false;
+    if (currentUserId && currentUserId !== userId) {
+      isFollowing = await isFollowingUser(currentUserId, userId);
+    }
+    
+    return {
+      ...profile,
+      isFollowing,
+      followerCount: profile.followers?.length || 0,
+      followingCount: profile.following?.length || 0
+    };
+  } catch (error) {
+    if (isOfflineError(error)) {
+      throw new Error('Cannot get user profile while offline. Please check your internet connection.');
+    }
+    console.error('Error getting user profile with stats:', error);
+    throw error;
   }
 } 

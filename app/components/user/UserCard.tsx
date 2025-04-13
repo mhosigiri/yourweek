@@ -2,6 +2,7 @@ import React from "react";
 import { UserSearchResult } from "@/lib/types/user";
 import Image from "next/image";
 import Button from "../ui/Button";
+import Link from "next/link";
 
 interface UserCardProps {
   user: UserSearchResult;
@@ -53,22 +54,40 @@ export default function UserCard({
               {user.bio}
             </p>
           )}
+          
+          <div className="flex mt-2 text-xs text-gray-500 space-x-4">
+            <div>
+              <span className="font-semibold">{user.followerCount || 0}</span> followers
+            </div>
+            <div>
+              <span className="font-semibold">{user.followingCount || 0}</span> following
+            </div>
+          </div>
         </div>
 
-        <Button
-          onClick={handleFollowClick}
-          disabled={disabled}
-          className={`
-            text-xs px-3 py-1
-            ${
-              user.isFollowing
-                ? "bg-gray-200 hover:bg-gray-300 text-gray-800"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }
-          `}
-        >
-          {user.isFollowing ? "Unfollow" : "Follow"}
-        </Button>
+        <div className="flex flex-col space-y-2">
+          <Button
+            onClick={handleFollowClick}
+            disabled={disabled}
+            className={`
+              text-xs px-3 py-1
+              ${
+                user.isFollowing
+                  ? "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }
+            `}
+          >
+            {user.isFollowing ? "Unfollow" : "Follow"}
+          </Button>
+          
+          <Link 
+            href={`/user/${user.uid}`}
+            className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md flex items-center justify-center transition-colors font-medium"
+          >
+            View Profile
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,229 @@
+.container {
+  perspective: 1200px;
+}
+
+.heptagon {
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease-out;
+}
+
+.heptagonFace {
+  position: absolute;
+  width: 300px;
+  height: 220px;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transition: opacity 0.3s ease, transform 0.5s ease;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.controlButton {
+  background: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.controlButton:hover {
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.controlButton:active {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transform: translateY(0);
+}
+
+.dayIndicator {
+  background: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+  text-align: center;
+  width: fit-content;
+}
+
+.taskInput {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 100%;
+  margin-bottom: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.taskInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+  outline: none;
+}
+
+.addButton {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.addButton:hover {
+  background: #2563eb;
+}
+
+.addButton:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.taskList {
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 10px;
+}
+
+.taskItem {
+  background: white;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+
+.timeRangeDisplay {
+  font-weight: 500;
+  font-size: 12px;
+  color: #4b5563;
+  margin-bottom: 4px;
+}
+
+.scheduleContainer {
+  margin-top: 40px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 20px;
+}
+
+.scheduleHeading {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.scheduleDay {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.scheduleDayHeading {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #1e40af;
+}
+
+.taskItemSchedule {
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.taskItemActive {
+  background: #dbeafe;
+  border-left: 4px solid #3b82f6;
+}
+
+.saveButton {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 24px auto;
+  display: block;
+}
+
+.saveButton:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.saveButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2);
+}
+
+.currentTime {
+  text-align: right;
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .heptagonFace {
+    width: 260px;
+    height: 200px;
+    padding: 15px;
+  }
+  
+  .controls {
+    margin-top: 10px;
+  }
+  
+  .controlButton {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+  
+  .saveButton {
+    padding: 8px 20px;
+    font-size: 14px;
+  }
+}

@@ -32,4 +32,7 @@ export interface UserSearchResult {
   bio?: string;
   photoURL?: string;
   isFollowing: boolean; // Whether the current user follows this user
+  followerCount?: number; // Number of followers
+  followingCount?: number; // Number of users they follow
+  availability?: AvailabilitySlot[]; // User's availability schedule
 } 

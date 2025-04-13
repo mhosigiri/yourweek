@@ -37,6 +37,20 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
     
+    // Tasks collection rules
+    match /tasks/{taskId} {
+      // Anyone authenticated can read tasks
+      allow read: if isAuthenticated();
+      
+      // Only the owner of a task can modify it
+      allow create, update, delete: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // For demo and development - allow broader access temporarily
+    match /demo/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
     // Add rules for other collections as needed
     match /{document=**} {
       allow read, write: if false; // Default deny for all other collections
