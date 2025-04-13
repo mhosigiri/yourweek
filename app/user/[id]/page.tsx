@@ -40,8 +40,7 @@ interface UserProfilePageParams {
 }
 
 export default function UserProfilePage({ params }: UserProfilePageParams) {
-  const unwrappedParams = use(params);
-  const { id: userId } = unwrappedParams;
+  const { id: userId } = params;
   const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile & { 
