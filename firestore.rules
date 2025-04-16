@@ -42,8 +42,9 @@ service cloud.firestore {
       // Anyone authenticated can read tasks
       allow read: if isAuthenticated();
       
-      // Only the owner of a task can modify it
-      allow create, update, delete: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // If taskId is the user's UID, they can create/update/delete it
+      // This is the pattern we're using in the app - using user's UID as the document ID
+      allow create, update, delete: if isAuthenticated() && taskId == request.auth.uid;
     }
     
     // For demo and development - allow broader access temporarily

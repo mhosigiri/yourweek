@@ -11,7 +11,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { RoundedBox, Text } from "@react-three/drei";
 import * as THREE from "three";
 import Button from "../components/ui/Button";
-import { logOut } from "@/lib/firebase";
+import { logOut, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 // Loading component for suspense
 const LoadingSpinner = () => (
@@ -63,6 +64,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
     endTime: "10:00",
     day,
   });
+  const [taskToCopy, setTaskToCopy] = useState<Task | null>(null);
+  const [copyToDay, setCopyToDay] = useState<string>("");
+  const [copyMessage, setCopyMessage] = useState<string>("");
 
   const handleAddTask = () => {
     onAddTask({
@@ -74,9 +78,105 @@ const TaskModal: React.FC<TaskModalProps> = ({
       description: "",
     });
   };
+  
+  const handleCopyConfirm = () => {
+    if (!taskToCopy || !copyToDay) return;
+    
+    onAddTask({
+      description: taskToCopy.description,
+      startTime: taskToCopy.startTime,
+      endTime: taskToCopy.endTime,
+      day: copyToDay,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5)
+    });
+    
+    setCopyMessage(`Task copied to ${copyToDay}!`);
+    setTimeout(() => {
+      setCopyMessage("");
+      setTaskToCopy(null);
+      setCopyToDay("");
+    }, 2000);
+  };
+  
+  const cancelCopy = () => {
+    setTaskToCopy(null);
+    setCopyToDay("");
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {/* Copy Task Dialog */}
+      {taskToCopy && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl p-5 w-full max-w-sm transform transition-all">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Copy Task</h3>
+              <button
+                onClick={cancelCopy}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="mb-2 text-sm text-gray-700">Task to copy:</p>
+              <div className="p-3 bg-gray-50 rounded-md">
+                <p className="font-medium text-gray-800">{taskToCopy.startTime} - {taskToCopy.endTime}</p>
+                <p className="text-gray-600">{taskToCopy.description}</p>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Copy to day:
+              </label>
+              <select
+                value={copyToDay}
+                onChange={(e) => setCopyToDay(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select a day</option>
+                {DAYS_OF_WEEK.filter(d => d !== day).map((otherDay) => (
+                  <option key={otherDay} value={otherDay}>
+                    {otherDay}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {copyMessage && (
+              <div className="mb-4 text-sm font-medium px-3 py-2 rounded-md bg-green-100 text-green-800">
+                {copyMessage}
+              </div>
+            )}
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelCopy}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCopyConfirm}
+                disabled={!copyToDay}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Copy Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md transform transition-all">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
@@ -168,25 +268,49 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <span className="font-medium text-gray-900">
                           {task.startTime} - {task.endTime}
                         </span>
-                        <button
-                          onClick={() => onDeleteTask(task.id)}
-                          className="text-red-500 hover:text-red-700"
-                          aria-label="Delete task"
-                        >
-                          <svg
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
+                        <div className="flex space-x-2">
+                          {/* Copy button */}
+                          <button
+                            onClick={() => setTaskToCopy(task)}
+                            className="text-blue-500 hover:text-blue-700"
+                            aria-label="Copy task"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
+                            <svg 
+                              className="h-5 w-5" 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" 
+                              />
+                            </svg>
+                          </button>
+                          
+                          {/* Delete button */}
+                          <button
+                            onClick={() => onDeleteTask(task.id)}
+                            className="text-red-500 hover:text-red-700"
+                            aria-label="Delete task"
+                          >
+                            <svg
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                       <p className="text-gray-700 mt-1">{task.description}</p>
                     </div>
@@ -657,6 +781,8 @@ const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({ tasks }) => {
 
   // Organize tasks by day
   useEffect(() => {
+    console.log("Schedule Display received tasks:", tasks);
+    
     const now = new Date();
     const dayNames = [
       "Sunday",
@@ -675,14 +801,31 @@ const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({ tasks }) => {
       organized[day] = [];
     });
 
+    // Don't proceed if tasks is empty or not an array
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+      console.log("No tasks to organize");
+      setTasksByDay(organized);
+      return;
+    }
+
     // Filter out tasks that have already ended today
     const validTasks = tasks.filter((task) => {
+      if (!task || !task.day || !task.endTime) {
+        console.log("Invalid task found:", task);
+        return false;
+      }
+      
       if (task.day !== currentDay) return true;
 
-      const [hours, minutes] = task.endTime.split(":").map(Number);
-      const taskEndTime = new Date();
-      taskEndTime.setHours(hours, minutes, 0, 0);
-      return taskEndTime > now;
+      try {
+        const [hours, minutes] = task.endTime.split(":").map(Number);
+        const taskEndTime = new Date();
+        taskEndTime.setHours(hours, minutes, 0, 0);
+        return taskEndTime > now;
+      } catch (e) {
+        console.error("Error processing task time:", e);
+        return false;
+      }
     });
 
     // Organize tasks by day
@@ -698,6 +841,7 @@ const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({ tasks }) => {
       organized[day].sort((a, b) => a.startTime.localeCompare(b.startTime));
     });
 
+    console.log("Organized tasks by day:", organized);
     setTasksByDay(organized);
   }, [tasks, currentTime]);
 
@@ -1217,20 +1361,73 @@ const DashboardContent = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [savedTasks, setSavedTasks] = useState<Task[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
 
-  // Load tasks from localStorage on initial render
+  // Load tasks from Firestore
   useEffect(() => {
-    const storedTasks = localStorage.getItem("social-plan_tasks");
-    if (storedTasks) {
+    const loadTasks = async () => {
+      if (!user?.uid) return;
+      
       try {
-        const parsedTasks = JSON.parse(storedTasks);
-        setTasks(parsedTasks);
-        setSavedTasks(parsedTasks);
-      } catch (e) {
-        console.error("Error parsing stored tasks", e);
+        // First try loading from localStorage as a fallback
+        const storedTasks = localStorage.getItem(`tasks_${user.uid}`);
+        if (storedTasks) {
+          try {
+            const parsedTasks = JSON.parse(storedTasks);
+            setTasks(parsedTasks);
+            setSavedTasks(parsedTasks);
+          } catch (e) {
+            console.error("Error parsing stored tasks", e);
+          }
+        }
+        
+        // Improved error handling with safer retry logic
+        const fetchFromFirestore = async (attempt = 1) => {
+          const maxRetries = 3;
+          
+          try {
+            // Try to fetch from Firestore
+            const taskDoc = doc(db, "tasks", user.uid);
+            const taskSnap = await getDoc(taskDoc);
+            
+            if (taskSnap.exists()) {
+              const taskData = taskSnap.data();
+              if (taskData.tasks) {
+                setTasks(taskData.tasks);
+                setSavedTasks(taskData.tasks);
+                // Update localStorage with the latest data
+                localStorage.setItem(`tasks_${user.uid}`, JSON.stringify(taskData.tasks));
+                console.log("Successfully loaded tasks from Firestore");
+              }
+            } else {
+              console.log("No tasks found in Firestore, using local data");
+            }
+          } catch (error) {
+            console.warn(`Error loading tasks (attempt ${attempt}/${maxRetries}):`, error);
+            
+            if (attempt < maxRetries) {
+              // Exponential backoff with jitter
+              const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
+              console.log(`Retrying in ${Math.round(delay/1000)} seconds...`);
+              
+              // Use setTimeout with a new function to avoid closure issues
+              setTimeout(() => fetchFromFirestore(attempt + 1), delay);
+            } else {
+              // This is just informational - we already have local data loaded
+              console.log("Local data will be used (Firestore unavailable)");
+            }
+          }
+        };
+        
+        fetchFromFirestore();
+      } catch (error) {
+        console.error("Critical error loading tasks:", error);
+        // If everything fails, we've already loaded from localStorage as fallback
       }
-    }
-  }, []);
+    };
+    
+    loadTasks();
+  }, [user?.uid]);
 
   const handleAddTask = (newTask: Task) => {
     setTasks((prev) => [...prev, newTask]);
@@ -1246,10 +1443,93 @@ const DashboardContent = () => {
     setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
-  const handleSaveWeek = () => {
-    // Save to localStorage
-    localStorage.setItem("social-plan_tasks", JSON.stringify(tasks));
-    setSavedTasks([...tasks]);
+  const handleSaveWeek = async () => {
+    if (!user?.uid) return;
+    
+    // Set status to saving
+    setSaveStatus("saving");
+    
+    // First, save to localStorage immediately for quick local persistence
+    localStorage.setItem(`tasks_${user.uid}`, JSON.stringify(tasks));
+    
+    // Improved Firestore save function with better error handling
+    const saveToFirestore = async (attempt = 1) => {
+      const maxRetries = 3;
+      
+      try {
+        // Make sure user is authenticated
+        if (!user?.uid) {
+          throw new Error("User not authenticated");
+        }
+        
+        // Verify tasks are in the correct format and not empty
+        if (!Array.isArray(tasks)) {
+          throw new Error("Tasks must be an array");
+        }
+        
+        // Save to Firestore with proper data structure
+        const taskDoc = doc(db, "tasks", user.uid);
+        
+        // Create a deep copy of the tasks to avoid any potential issues
+        // with references or non-serializable objects
+        const tasksCopy = JSON.parse(JSON.stringify(tasks));
+        
+        // Clear tasks collection first to avoid issues with updates
+        try {
+          // First try to write the data
+          await setDoc(taskDoc, {
+            tasks: tasksCopy,
+            updatedAt: serverTimestamp(),
+            userId: user.uid
+          });
+        } catch (writeError) {
+          console.error("Initial write failed, trying with merge option:", writeError);
+          
+          // If that fails, try with the merge option
+          await setDoc(taskDoc, {
+            tasks: tasksCopy,
+            updatedAt: serverTimestamp(),
+            userId: user.uid
+          }, { merge: true });
+        }
+        
+        console.log("Successfully saved tasks to Firestore:", tasksCopy);
+        
+        // Update both task states to ensure UI is consistent
+        setTasks(tasksCopy);
+        setSavedTasks(tasksCopy);
+        
+        // Show success status
+        setSaveStatus("success");
+        
+        // Reset status after 3 seconds
+        setTimeout(() => {
+          setSaveStatus("idle");
+        }, 3000);
+      } catch (error) {
+        console.error(`Error saving tasks to Firestore (attempt ${attempt}/${maxRetries}):`, error);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff with jitter
+          const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
+          console.log(`Retrying in ${Math.round(delay/1000)} seconds...`);
+          
+          // Use setTimeout with a new function to avoid closure issues
+          setTimeout(() => saveToFirestore(attempt + 1), delay);
+        } else {
+          console.error("All attempts to save to Firestore failed:", error);
+          setSaveStatus("error");
+          
+          // Reset status after 3 seconds
+          setTimeout(() => {
+            setSaveStatus("idle");
+          }, 3000);
+        }
+      }
+    };
+    
+    // Start the save process with retry logic
+    saveToFirestore();
   };
 
   const handleLogout = async (): Promise<void> => {
@@ -1451,34 +1731,284 @@ const DashboardContent = () => {
 
             {/* Save Button */}
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-              <button
-                onClick={handleSaveWeek}
-                className="mx-auto flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md hover:shadow-lg"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={handleSaveWeek}
+                  disabled={saveStatus === "saving"}
+                  className={`mx-auto flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white transition-colors shadow-md hover:shadow-lg
+                  ${saveStatus === "saving" 
+                    ? "bg-gray-400 cursor-not-allowed" 
+                    : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"}`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                  />
-                </svg>
-                Save Week Preferences
-              </button>
+                  {saveStatus === "saving" ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      </svg>
+                      Save Week Preferences
+                    </>
+                  )}
+                </button>
+                
+                {/* Success Message */}
+                {saveStatus === "success" && (
+                  <div className="mt-3 text-sm font-medium px-4 py-2 rounded-md bg-green-100 text-green-800 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Tasks saved successfully to database!
+                  </div>
+                )}
+                
+                {/* Error Message */}
+                {saveStatus === "error" && (
+                  <div className="mt-3 text-sm font-medium px-4 py-2 rounded-md bg-red-100 text-red-800 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Error saving to database. Tasks saved locally.
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Schedule Display */}
-            {savedTasks.length > 0 && (
-              <div className="p-6 border-t border-gray-200">
-                <ScheduleDisplay tasks={savedTasks} />
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Your Upcoming Schedule
+                </h2>
+                <div className="text-gray-500 font-medium">
+                  {new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
               </div>
-            )}
+
+              {Array.isArray(tasks) && tasks.length > 0 ? (
+                <>
+                  {/* Desktop view (table) - hidden on mobile */}
+                  <div className="hidden md:block overflow-hidden rounded-lg border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {DAYS_OF_WEEK.map((day) => {
+                            const isCurrentDay =
+                              day ===
+                              [
+                                "Sunday",
+                                "Monday",
+                                "Tuesday",
+                                "Wednesday",
+                                "Thursday",
+                                "Friday",
+                                "Saturday",
+                              ][new Date().getDay()];
+                            const dayColor = (() => {
+                              const dayIndex = DAYS_OF_WEEK.indexOf(day);
+                              const colors = [
+                                "#0ea5e9", // Monday - blue
+                                "#22c55e", // Tuesday - green
+                                "#eab308", // Wednesday - yellow
+                                "#ef4444", // Thursday - red
+                                "#a855f7", // Friday - purple
+                                "#f97316", // Saturday - orange
+                                "#64748b", // Sunday - slate
+                              ];
+                              return colors[dayIndex] || "#3b82f6";
+                            })();
+
+                            return (
+                              <th
+                                key={day}
+                                scope="col"
+                                className={`px-3 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                                  isCurrentDay
+                                    ? "bg-blue-50 border-b-2"
+                                    : "text-gray-500 border-b"
+                                }`}
+                                style={{
+                                  borderBottomColor: isCurrentDay
+                                    ? dayColor
+                                    : undefined,
+                                  color: isCurrentDay ? dayColor : undefined,
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-semibold">{day}</span>
+                                  <span className="text-xs font-normal opacity-75">
+                                    {(() => {
+                                      const now = new Date();
+                                      const dayNames = [
+                                        "Sunday",
+                                        "Monday",
+                                        "Tuesday",
+                                        "Wednesday",
+                                        "Thursday",
+                                        "Friday",
+                                        "Saturday",
+                                      ];
+                                      const currentDayIndex = dayNames.indexOf(dayNames[now.getDay()]);
+                                      const targetDayIndex = dayNames.indexOf(day);
+                                      
+                                      // Calculate days to add
+                                      let daysToAdd = targetDayIndex - currentDayIndex;
+                                      if (daysToAdd < 0) daysToAdd += 7;
+                                      
+                                      const date = new Date();
+                                      date.setDate(now.getDate() + daysToAdd);
+                                      
+                                      return date.toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                      });
+                                    })()}
+                                  </span>
+                                </div>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        <tr className="divide-x divide-gray-100">
+                          {DAYS_OF_WEEK.map((day) => {
+                            const dayTasks = tasks.filter(task => task.day === day);
+                            const isEmpty = dayTasks.length === 0;
+                            const dayColor = (() => {
+                              const dayIndex = DAYS_OF_WEEK.indexOf(day);
+                              const colors = [
+                                "#0ea5e9", // Monday - blue
+                                "#22c55e", // Tuesday - green
+                                "#eab308", // Wednesday - yellow
+                                "#ef4444", // Thursday - red
+                                "#a855f7", // Friday - purple
+                                "#f97316", // Saturday - orange
+                                "#64748b", // Sunday - slate
+                              ];
+                              return colors[dayIndex] || "#3b82f6";
+                            })();
+                            
+                            return (
+                              <td
+                                key={day}
+                                className="px-2 py-2 align-top"
+                                style={{ minHeight: "120px" }}
+                              >
+                                {isEmpty ? (
+                                  <div className="h-20 flex items-center justify-center text-gray-400 text-xs">
+                                    No tasks
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {dayTasks
+                                      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                      .map((task) => {
+                                        const lightColor = `${dayColor}20`;
+                                        return (
+                                          <div
+                                            key={task.id}
+                                            className={`p-2 rounded text-xs hover:bg-gray-50`}
+                                            style={{
+                                              backgroundColor: undefined,
+                                              borderLeft: `2px solid ${dayColor}`
+                                            }}
+                                          >
+                                            <div className="flex justify-between items-center">
+                                              <span
+                                                className="font-medium text-gray-700"
+                                              >
+                                                {task.startTime} - {task.endTime}
+                                              </span>
+                                            </div>
+                                            <div
+                                              className="mt-1 text-xs font-normal text-gray-600"
+                                            >
+                                              {task.description}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Mobile view - simplify it for this fix */}
+                  <div className="md:hidden space-y-4">
+                    {DAYS_OF_WEEK.map((day) => {
+                      const dayTasks = tasks.filter(task => task.day === day);
+                      if (dayTasks.length === 0) return null;
+                      
+                      return (
+                        <div key={day} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="bg-gray-50 py-2 px-3 font-medium border-b border-gray-200">
+                            {day}
+                          </div>
+                          <div className="p-3 space-y-2">
+                            {dayTasks
+                              .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                              .map(task => (
+                                <div key={task.id} className="p-2 bg-gray-50 rounded">
+                                  <div className="font-medium">{task.startTime} - {task.endTime}</div>
+                                  <div className="text-gray-600 mt-1">{task.description}</div>
+                                </div>
+                              ))
+                            }
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 text-gray-400 mb-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <p className="text-gray-500 mb-1">No upcoming tasks scheduled</p>
+                  <p className="text-gray-400 text-sm">
+                    Start by adding tasks to your week
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>

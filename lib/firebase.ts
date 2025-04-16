@@ -36,10 +36,11 @@ const firebaseConfig = {
 // Initialize Firebase (Prevent multiple initializations in Next.js)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with persistence enabled for better offline support
+// Initialize Firestore with optimized configuration for offline support and better performance
 export const db: Firestore = initializeFirestore(app, {
   localCache: persistentLocalCache({
-    tabManager: persistentSingleTabManager(undefined)
+    tabManager: persistentSingleTabManager(),
+    cacheSizeBytes: CACHE_SIZE_UNLIMITED
   })
 });
 
