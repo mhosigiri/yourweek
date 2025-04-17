@@ -12,7 +12,7 @@ import { RoundedBox, Text } from "@react-three/drei";
 import * as THREE from "three";
 import Button from "../components/ui/Button";
 import { logOut, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 
 // Loading component for suspense
 const LoadingSpinner = () => (
@@ -1356,144 +1356,167 @@ const DashboardScene: React.FC<DashboardSceneProps> = ({
 
 // Dashboard content component
 const DashboardContent = () => {
-  const { user } = useAuth();
+  const { user, isOnline } = useAuth();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [savedTasks, setSavedTasks] = useState<Task[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Load tasks from Firestore
+  // Check for unsaved changes by comparing tasks with savedTasks
   useEffect(() => {
-    const loadTasks = async () => {
-      if (!user?.uid) return;
+    // Simple check to determine if the current tasks differ from the saved tasks
+    const tasksString = JSON.stringify(tasks);
+    const savedTasksString = JSON.stringify(savedTasks);
+    
+    setHasUnsavedChanges(tasksString !== savedTasksString);
+  }, [tasks, savedTasks]);
+
+  // Load tasks from Firestore with real-time sync
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    
+    if (!user?.uid) return;
+    
+    try {
+      // First try loading from localStorage as a fallback
+      const storedTasks = localStorage.getItem(`tasks_${user.uid}`);
+      if (storedTasks) {
+        try {
+          const parsedTasks = JSON.parse(storedTasks);
+          setTasks(parsedTasks);
+          setSavedTasks(parsedTasks);
+        } catch (e) {
+          console.error("Error parsing stored tasks", e);
+        }
+      }
       
-      try {
-        // First try loading from localStorage as a fallback
-        const storedTasks = localStorage.getItem(`tasks_${user.uid}`);
-        if (storedTasks) {
-          try {
-            const parsedTasks = JSON.parse(storedTasks);
-            setTasks(parsedTasks);
-            setSavedTasks(parsedTasks);
-          } catch (e) {
-            console.error("Error parsing stored tasks", e);
+      // Set up real-time listener for tasks
+      console.log("Setting up real-time sync for tasks...");
+      const taskDoc = doc(db, "tasks", user.uid);
+      
+      unsubscribe = onSnapshot(
+        taskDoc,
+        (doc) => {
+          if (doc.exists()) {
+            const taskData = doc.data();
+            if (taskData.tasks) {
+              console.log("Received updated tasks via real-time sync");
+              setTasks(taskData.tasks);
+              setSavedTasks(taskData.tasks);
+              // Update localStorage with the latest data
+              localStorage.setItem(`tasks_${user.uid}`, JSON.stringify(taskData.tasks));
+              // Reset any previous error state
+              if (saveStatus === "error") {
+                setSaveStatus("idle");
+              }
+            }
+          } else {
+            console.log("No tasks document exists in Firestore yet");
+          }
+        },
+        (error) => {
+          console.error("Error in real-time task listener:", error);
+          // If we get an error due to being offline, we'll keep using local data
+          if (error.code === "failed-precondition" || error.message.includes("offline")) {
+            console.log("Offline mode - using local data");
           }
         }
-        
-        // Improved error handling with safer retry logic
-        const fetchFromFirestore = async (attempt = 1) => {
-          const maxRetries = 3;
-          
-          try {
-            // Try to fetch from Firestore
-            const taskDoc = doc(db, "tasks", user.uid);
-            const taskSnap = await getDoc(taskDoc);
-            
-            if (taskSnap.exists()) {
-              const taskData = taskSnap.data();
-              if (taskData.tasks) {
-                setTasks(taskData.tasks);
-                setSavedTasks(taskData.tasks);
-                // Update localStorage with the latest data
-                localStorage.setItem(`tasks_${user.uid}`, JSON.stringify(taskData.tasks));
-                console.log("Successfully loaded tasks from Firestore");
-              }
-            } else {
-              console.log("No tasks found in Firestore, using local data");
-            }
-          } catch (error) {
-            console.warn(`Error loading tasks (attempt ${attempt}/${maxRetries}):`, error);
-            
-            if (attempt < maxRetries) {
-              // Exponential backoff with jitter
-              const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
-              console.log(`Retrying in ${Math.round(delay/1000)} seconds...`);
-              
-              // Use setTimeout with a new function to avoid closure issues
-              setTimeout(() => fetchFromFirestore(attempt + 1), delay);
-            } else {
-              // This is just informational - we already have local data loaded
-              console.log("Local data will be used (Firestore unavailable)");
-            }
-          }
-        };
-        
-        fetchFromFirestore();
-      } catch (error) {
-        console.error("Critical error loading tasks:", error);
-        // If everything fails, we've already loaded from localStorage as fallback
+      );
+    } catch (error) {
+      console.error("Critical error setting up tasks sync:", error);
+      // If everything fails, we've already loaded from localStorage as fallback
+    }
+    
+    // Cleanup function to unsubscribe when component unmounts
+    return () => {
+      if (unsubscribe) {
+        console.log("Cleaning up real-time task listener");
+        unsubscribe();
       }
     };
-    
-    loadTasks();
-  }, [user?.uid]);
+  }, [user?.uid, saveStatus]);
 
   const handleAddTask = (newTask: Task) => {
+    // Add the task locally
     setTasks((prev) => [...prev, newTask]);
+    
+    // If online, auto-save to sync with other devices
+    if (isOnline) {
+      // Schedule a save after a short delay to allow for batching multiple quick changes
+      const timeoutId = setTimeout(() => handleSaveWeek(), 1000);
+      return () => clearTimeout(timeoutId);
+    }
   };
 
   const handleUpdateTask = (id: string, updatedTask: Partial<Task>) => {
     setTasks((prev) =>
       prev.map((task) => (task.id === id ? { ...task, ...updatedTask } : task))
     );
+    
+    // If online, auto-save to sync with other devices
+    if (isOnline) {
+      // Schedule a save after a short delay
+      const timeoutId = setTimeout(() => handleSaveWeek(), 1000);
+      return () => clearTimeout(timeoutId);
+    }
   };
 
   const handleDeleteTask = (id: string) => {
     setTasks((prev) => prev.filter((task) => task.id !== id));
+    
+    // If online, auto-save to sync with other devices
+    if (isOnline) {
+      // Schedule a save after a short delay
+      const timeoutId = setTimeout(() => handleSaveWeek(), 1000);
+      return () => clearTimeout(timeoutId);
+    }
   };
 
   const handleSaveWeek = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      console.error("Cannot save: User not authenticated");
+      setSaveStatus("error");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+      return;
+    }
     
     // Set status to saving
     setSaveStatus("saving");
     
     // First, save to localStorage immediately for quick local persistence
     localStorage.setItem(`tasks_${user.uid}`, JSON.stringify(tasks));
+    console.log("Saved tasks to localStorage for offline support");
     
     // Improved Firestore save function with better error handling
     const saveToFirestore = async (attempt = 1) => {
       const maxRetries = 3;
       
       try {
-        // Make sure user is authenticated
-        if (!user?.uid) {
-          throw new Error("User not authenticated");
-        }
-        
-        // Verify tasks are in the correct format and not empty
+        // Verify tasks are in the correct format
         if (!Array.isArray(tasks)) {
           throw new Error("Tasks must be an array");
         }
         
-        // Save to Firestore with proper data structure
-        const taskDoc = doc(db, "tasks", user.uid);
+        // IMPORTANT: Always use the user's UID as the document ID
+        // This ensures cross-device sync will work correctly with Firestore security rules
+        const uid = user.uid;
+        const taskDoc = doc(db, "tasks", uid);
+        console.log(`Saving tasks to Firestore document: tasks/${uid}`);
         
         // Create a deep copy of the tasks to avoid any potential issues
         // with references or non-serializable objects
         const tasksCopy = JSON.parse(JSON.stringify(tasks));
         
-        // Clear tasks collection first to avoid issues with updates
-        try {
-          // First try to write the data
-          await setDoc(taskDoc, {
-            tasks: tasksCopy,
-            updatedAt: serverTimestamp(),
-            userId: user.uid
-          });
-        } catch (writeError) {
-          console.error("Initial write failed, trying with merge option:", writeError);
-          
-          // If that fails, try with the merge option
-          await setDoc(taskDoc, {
-            tasks: tasksCopy,
-            updatedAt: serverTimestamp(),
-            userId: user.uid
-          }, { merge: true });
-        }
+        // Save data with merge option to preserve any fields we don't know about
+        await setDoc(taskDoc, {
+          tasks: tasksCopy,
+          updatedAt: serverTimestamp(),
+          userId: uid
+        }, { merge: true });
         
-        console.log("Successfully saved tasks to Firestore:", tasksCopy);
+        console.log("Successfully saved tasks to Firestore");
         
         // Update both task states to ensure UI is consistent
         setTasks(tasksCopy);
@@ -1729,16 +1752,47 @@ const DashboardContent = () => {
               />
             </div>
 
-            {/* Save Button */}
+            {/* Save Button with Sync Status */}
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
               <div className="flex flex-col items-center">
+                <div className="flex items-center w-full justify-between mb-3 px-2">
+                  {/* Left side - Sync status */}
+                  <div className="flex items-center text-sm text-gray-600">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-5 w-5 mr-1.5 ${isOnline ? "text-green-500" : "text-yellow-500"}`}
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d={isOnline 
+                          ? "M5 12h14M12 5l7 7-7 7" // Online arrow
+                          : "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636" // Offline symbol
+                        } 
+                      />
+                    </svg>
+                    <span>{isOnline ? "Real-time sync active" : "Offline mode"}</span>
+                  </div>
+                  
+                  {/* Right side - Last sync time (only if we implemented it) */}
+                  <div className="text-xs text-gray-500">
+                    {isOnline && "Changes sync across devices automatically"}
+                  </div>
+                </div>
+                
                 <button
                   onClick={handleSaveWeek}
-                  disabled={saveStatus === "saving"}
+                  disabled={saveStatus === "saving" || (!hasUnsavedChanges && saveStatus !== "error")}
                   className={`mx-auto flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white transition-colors shadow-md hover:shadow-lg
                   ${saveStatus === "saving" 
                     ? "bg-gray-400 cursor-not-allowed" 
-                    : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"}`}
+                    : hasUnsavedChanges || saveStatus === "error"
+                      ? "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      : "bg-gray-400 cursor-not-allowed"}`}
                 >
                   {saveStatus === "saving" ? (
                     <>
@@ -1748,7 +1802,7 @@ const DashboardContent = () => {
                       </svg>
                       Saving...
                     </>
-                  ) : (
+                  ) : hasUnsavedChanges ? (
                     <>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -1764,7 +1818,43 @@ const DashboardContent = () => {
                           d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
                         />
                       </svg>
-                      Save Week Preferences
+                      Save Unsaved Changes
+                    </>
+                  ) : saveStatus === "error" ? (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                      Retry Saving
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      All Changes Saved
                     </>
                   )}
                 </button>
