@@ -39,7 +39,9 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 // Initialize Firestore with optimized configuration for offline support and better performance
 export const db: Firestore = initializeFirestore(app, {
   localCache: persistentLocalCache({
-    tabManager: persistentSingleTabManager(),
+    tabManager: persistentSingleTabManager({
+      forceOwnership: true
+    }),
     cacheSizeBytes: CACHE_SIZE_UNLIMITED
   })
 });
